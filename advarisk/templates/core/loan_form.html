@@ -171,14 +171,12 @@
         <div>
           <label style="font-size:0.82rem;">State <span style="color:var(--danger);">*</span></label>
           {{ form.state }}
-          {% for err in form.state.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{ err
-            }}</div>{% endfor %}
+          {% for err in form.state.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{ err }}</div>{% endfor %}
         </div>
         <div>
           <label style="font-size:0.82rem;">District <span style="color:var(--danger);">*</span></label>
           {{ form.district }}
-          {% for err in form.district.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{
-            err }}</div>{% endfor %}
+          {% for err in form.district.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{ err }}</div>{% endfor %}
         </div>
         <div>
           <label style="font-size:0.82rem;">Sub-District <span style="color:var(--danger);">*</span></label>
@@ -187,8 +185,7 @@
         <div>
           <label style="font-size:0.82rem;">SRO Number <span style="color:var(--danger);">*</span></label>
           {{ form.sro_no }}
-          {% for err in form.sro_no.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{
-            err }}</div>{% endfor %}
+          {% for err in form.sro_no.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{ err }}</div>{% endfor %}
         </div>
       </div>
     </div>
@@ -203,13 +200,10 @@
 
     {# ── Each doc field rendered explicitly (Django doesn't support multi-var for) #}
     {% for field in form %}
-    {% if field.html_name == 'doc_lease_deed' or field.html_name == 'doc_title_deed' or field.html_name ==
-    'doc_encumbrance' or field.html_name == 'doc_attornment' or field.html_name == 'doc_mother_deed' or field.html_name
-    == 'doc_building_plan' or field.html_name == 'doc_occupancy' or field.html_name == 'doc_tax_receipts' %}
+    {% if "doc_" in field.name %}
     <div
       style="margin-bottom:1rem;padding:0.75rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;">
-      <label for="{{ field.id_for_label }}" style="font-size:0.85rem;margin-bottom:0.35rem;display:block;">{{
-        field.label }}</label>
+      <label for="{{ field.id_for_label }}" style="font-size:0.85rem;margin-bottom:0.35rem;display:block;">{{ field.label }}</label>
       {{ field }}
       {% if field.help_text %}
       <div style="color:var(--muted);font-size:0.72rem;margin-top:0.3rem;">{{ field.help_text }}</div>
