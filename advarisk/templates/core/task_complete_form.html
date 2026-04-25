@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Complete Task | VerDoc{% endblock %}
+
+{% block content %}
+<div class="glass" style="max-width: 500px; margin: 2rem auto; padding: 2rem;">
+    <h2 style="margin-top: 0; color: white;">&#10003; Complete Task</h2>
+    <p style="color: var(--muted); font-size: 0.875rem; margin-bottom: 0.5rem;">
+        <strong>Task:</strong> {{ task.get_operation_type_display }} &nbsp;|&nbsp;
+        <strong>Client:</strong> {{ task.client.first_name|default:task.client.username }} &nbsp;|&nbsp;
+        <strong>Amount:</strong> ₹{{ task.amount }}
+    </p>
+    <p style="color: var(--muted); font-size: 0.8rem; margin-bottom: 1.5rem;">
+        SRO: {{ task.sro_no|default:"N/A" }} &nbsp;·&nbsp; {{ task.district }}, {{ task.state }}
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+        <div style="margin-bottom: 1.25rem;">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+                <div style="color: var(--muted); font-size: 0.75rem; margin-top: 0.25rem;">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+                <div style="color: var(--danger); font-size: 0.85rem;">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--success), #059669);">
+            Mark as Completed
+        </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="{% url 'agent_dashboard' %}" style="color: var(--muted); text-decoration: none; font-size: 0.875rem;">&larr; Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

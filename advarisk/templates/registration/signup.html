@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% block title %}Sign Up | VerDoc{% endblock %}
+
+{% block content %}
+<style>
+  .role-card {
+    border: 2px solid var(--glass-border); border-radius: 14px; padding: 2rem 1.5rem;
+    text-align: center; cursor: pointer; transition: all 0.25s;
+    background: var(--glass-bg); text-decoration: none; color: var(--text); display: block;
+  }
+  .role-card:hover { border-color: var(--primary); background: rgba(59,130,246,0.08); transform: translateY(-3px); }
+  .role-card.agent:hover { border-color: var(--warning); background: rgba(245,158,11,0.08); }
+  .role-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+  .field-error { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; }
+  .field-help  { color: var(--muted); font-size: 0.75rem; margin-top: 0.25rem; }
+  .aadhar-row { display: flex; gap: 0.5rem; align-items: center; }
+  .aadhar-sep { color: var(--muted); font-weight: 700; font-size: 1.2rem; }
+  input.required-missing, select.required-missing {
+    border-color: var(--danger) !important; animation: shake 0.3s;
+  }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .missing-toast {
+    position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999;
+    background:rgba(239,68,68,0.95); color:#fff; border-radius:10px;
+    padding:0.8rem 1.4rem; font-size:0.875rem; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4); animation:slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  /* Live-check indicators */
+  .check-icon { display:inline-block; margin-left:6px; font-size:0.85rem; transition:opacity 0.2s; }
+  .check-ok   { color: #10b981; }
+  .check-fail { color: #ef4444; }
+  .field-inline-error {
+    color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem; display: none;
+  }
+</style>
+
+{% if show_role_selector %}
+<!-- ── Role Selector ─────────────────────────────────────────────────────── -->
+<div class="glass" style="max-width:560px;margin:3rem auto;padding:2.5rem;">
+  <h1 style="font-size:1.6rem;margin-bottom:0.3rem;">Create Account</h1>
+  <p style="color:var(--muted);font-size:0.875rem;margin-bottom:2rem;">Choose how you'd like to join the VerDoc platform.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+    <a href="{% url 'signup_client' %}" class="role-card" id="role-client">
+      <div class="role-icon">🏦</div>
+      <div style="font-size:1.2rem;font-weight:700;margin-bottom:0.4rem;">Client</div>
+      <div style="font-size:0.82rem;color:var(--muted);">Bank / Institution submitting loan operations</div>
+    </a>
+    <a href="{% url 'signup_agent' %}" class="role-card agent" id="role-agent">
+      <div class="role-icon">🪪</div>
+      <div style="font-size:1.2rem;font-weight:700;margin-bottom:0.4rem;">Agent</div>
+      <div style="font-size:0.82rem;color:var(--muted);">Sub-Registrar Office verified agent</div>
+    </a>
+  </div>
+  <div style="margin-top:2rem;text-align:center;font-size:0.85rem;color:var(--muted);">
+    Already have an account? <a href="{% url 'login' %}" style="color:var(--primary);">Log in</a>
+  </div>
+</div>
+
+{% else %}
+<!-- ── Signup Form ───────────────────────────────────────────────────────── -->
+<div class="glass" style="max-width:560px;margin:2rem auto;padding:2.5rem;">
+  {% if role == 'CLIENT' %}
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+    <span style="font-size:1.8rem;">🏦</span>
+    <h1 style="font-size:1.5rem;margin:0;">Client Sign Up</h1>
+    <span style="margin-left:auto;background:rgba(59,130,246,0.15);color:var(--primary);font-size:0.75rem;font-weight:700;padding:0.2rem 0.7rem;border-radius:99px;">CLIENT</span>
+  </div>
+  <p style="color:var(--muted);font-size:0.82rem;margin-bottom:2rem;">Login using your bank email address.</p>
+  {% else %}
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+    <span style="font-size:1.8rem;">🪪</span>
+    <h1 style="font-size:1.5rem;margin:0;">Agent Sign Up</h1>
+    <span style="margin-left:auto;background:rgba(245,158,11,0.15);color:var(--warning);font-size:0.75rem;font-weight:700;padding:0.2rem 0.7rem;border-radius:99px;">AGENT</span>
+  </div>
+  <p style="color:var(--muted);font-size:0.82rem;margin-bottom:2rem;">Login via mobile number or email. SRO assignment required.</p>
+  {% endif %}
+
+  <form method="post" id="signupForm" novalidate>
+    {% csrf_token %}
+
+    {% for field in form %}
+    <div style="margin-bottom:1.25rem;" class="form-field-wrap" data-field="{{ field.html_name }}">
+
+      {% if field.html_name == 'aadhar_number' %}
+      <!-- ── Aadhaar split-widget ──────────────────────────────────────── -->
+      <label>{{ field.label }} <span style="color:var(--danger);">*</span>
+        <span class="check-icon" id="aadhar-check"></span>
+      </label>
+      <div class="aadhar-row">
+        <input type="text" id="aadhar-p1" maxlength="4" inputmode="numeric" placeholder="XXXX"
+               style="width:80px;text-align:center;letter-spacing:3px;font-size:1rem;">
+        <span class="aadhar-sep">–</span>
+        <input type="text" id="aadhar-p2" maxlength="4" inputmode="numeric" placeholder="XXXX"
+               style="width:80px;text-align:center;letter-spacing:3px;font-size:1rem;">
+        <span class="aadhar-sep">–</span>
+        <input type="text" id="aadhar-p3" maxlength="4" inputmode="numeric" placeholder="XXXX"
+               style="width:80px;text-align:center;letter-spacing:3px;font-size:1rem;">
+      </div>
+      {{ field }}<!-- hidden -->
+      <div id="aadhar-inline-error" class="field-inline-error">⚠ This Aadhaar is already registered.</div>
+      {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+
+      {% elif field.html_name == 'pan_number' %}
+      <!-- ── PAN field ─────────────────────────────────────────────────── -->
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }} <span style="color:var(--danger);">*</span>
+        <span class="check-icon" id="pan-check"></span>
+      </label>
+      {{ field }}
+      <div id="pan-inline-error" class="field-inline-error">⚠ This PAN is already registered.</div>
+      {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+      {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+
+      {% elif field.html_name == 'email' %}
+      <!-- ── Email field ──────────────────────────────────────────────── -->
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }} <span style="color:var(--danger);">*</span>
+        <span class="check-icon" id="email-check"></span>
+      </label>
+      {{ field }}
+      <div id="email-inline-error" class="field-inline-error">⚠ This email is already registered.</div>
+      {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+
+      {% elif field.html_name == 'phone_number' %}
+      <!-- ── Phone field ───────────────────────────────────────────────── -->
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }} <span style="color:var(--danger);">*</span>
+        <span class="check-icon" id="phone-check"></span>
+      </label>
+      {{ field }}
+      <div id="phone-inline-error" class="field-inline-error">⚠ This mobile number is already registered.</div>
+      {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+      {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+
+      {% else %}
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}
+        {% if field.field.required %}<span style="color:var(--danger);">*</span>{% endif %}
+      </label>
+      {{ field }}
+      {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+      {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      {% endif %}
+
+    </div>
+    {% endfor %}
+
+    <button type="submit" id="submitBtn" class="btn-primary" style="width:100%;padding:0.8rem;font-size:1rem;">
+      Create Account &amp; Verify
+    </button>
+  </form>
+
+  <div style="margin-top:1.5rem;text-align:center;font-size:0.85rem;color:var(--muted);">
+    Already have an account? <a href="{% url 'login' %}" style="color:var(--primary);">Log in</a>
+    &nbsp;·&nbsp;
+    <a href="{% url 'signup' %}" style="color:var(--muted);">← Different role</a>
+  </div>
+</div>
+
+{% if role == 'AGENT' %}
+<span id="sro-data" data-map='{{ sro_map_json|safe }}' style="display:none;"></span>
+<script>
+const SRO_MAP = JSON.parse(document.getElementById('sro-data').dataset.map);
+function populateSelect(el, options, placeholder) {
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    options.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; el.appendChild(opt); });
+}
+const stateEl = document.getElementById('sro-state');
+const distEl  = document.getElementById('sro-district');
+const subEl   = document.getElementById('sro-sub-district');
+const sroEl   = document.getElementById('sro-node');
+if (stateEl) {
+    populateSelect(stateEl, Object.keys(SRO_MAP), '— Select State —');
+    stateEl.addEventListener('change', () => {
+        populateSelect(distEl, Object.keys(SRO_MAP[stateEl.value] || {}), '— Select District —');
+        populateSelect(subEl, [], '— Select Sub-District —');
+        populateSelect(sroEl, [], '— Select SRO —');
+    });
+    distEl.addEventListener('change', () => {
+        const subs = Object.keys((SRO_MAP[stateEl.value] || {})[distEl.value] || {});
+        populateSelect(subEl, subs, '— Select Sub-District —');
+        populateSelect(sroEl, [], '— Select SRO —');
+    });
+    subEl.addEventListener('change', () => {
+        const sros = ((SRO_MAP[stateEl.value] || {})[distEl.value] || {})[subEl.value] || [];
+        populateSelect(sroEl, sros, '— Select SRO No —');
+    });
+}
+</script>
+{% endif %}
+
+<script>
+// ── Aadhaar split-input ───────────────────────────────────────────────────────
+const p1 = document.getElementById('aadhar-p1');
+const p2 = document.getElementById('aadhar-p2');
+const p3 = document.getElementById('aadhar-p3');
+const hiddenAadhar = document.getElementById('id_aadhar_number');
+
+function onlyDigits(el) { el.value = el.value.replace(/\D/g, ''); }
+function syncAadhar() {
+    if (hiddenAadhar) hiddenAadhar.value = (p1?.value||'') + (p2?.value||'') + (p3?.value||'');
+}
+if (p1) {
+    [p1, p2, p3].forEach(el => el.addEventListener('input', () => { onlyDigits(el); syncAadhar(); }));
+    p1.addEventListener('input', () => { if (p1.value.length === 4) p2.focus(); });
+    p2.addEventListener('input', () => { if (p2.value.length === 4) p3.focus(); });
+    p2.addEventListener('keydown', e => { if (e.key === 'Backspace' && p2.value === '') p1.focus(); });
+    p3.addEventListener('keydown', e => { if (e.key === 'Backspace' && p3.value === '') p2.focus(); });
+    // Re-populate from hidden if Django re-renders with a value
+    if (hiddenAadhar?.value.length === 12) {
+        p1.value = hiddenAadhar.value.substring(0, 4);
+        p2.value = hiddenAadhar.value.substring(4, 8);
+        p3.value = hiddenAadhar.value.substring(8, 12);
+    }
+    hiddenAadhar.style.display = 'none';
+
+    // Live check on Aadhaar complete
+    function checkAadhar() {
+        const val = hiddenAadhar.value;
+        if (val.length !== 12) return;
+        const icon = document.getElementById('aadhar-check');
+        const err  = document.getElementById('aadhar-inline-error');
+        fetch(`/api/check-aadhar/?aadhar=${val}`)
+            .then(r => r.json())
+            .then(d => {
+                icon.textContent = d.exists ? '✗' : '✓';
+                icon.className = 'check-icon ' + (d.exists ? 'check-fail' : 'check-ok');
+                err.style.display = d.exists ? 'block' : 'none';
+            });
+    }
+    p3.addEventListener('blur', checkAadhar);
+}
+
+// ── PAN uppercase + live check ────────────────────────────────────────────────
+const panInput = document.getElementById('id_pan_number');
+if (panInput) {
+    panInput.addEventListener('input', () => { panInput.value = panInput.value.toUpperCase(); });
+    panInput.addEventListener('blur', () => {
+        const val = panInput.value.trim().toUpperCase();
+        if (val.length < 10) return;
+        const icon = document.getElementById('pan-check');
+        const err  = document.getElementById('pan-inline-error');
+        fetch(`/api/check-pan/?pan=${encodeURIComponent(val)}`)
+            .then(r => r.json())
+            .then(d => {
+                icon.textContent = d.exists ? '✗' : '✓';
+                icon.className = 'check-icon ' + (d.exists ? 'check-fail' : 'check-ok');
+                err.style.display = d.exists ? 'block' : 'none';
+            });
+    });
+}
+
+// ── Email live check ──────────────────────────────────────────────────────────
+const emailInput = document.getElementById('id_email');
+if (emailInput) {
+    emailInput.addEventListener('blur', () => {
+        const val = emailInput.value.trim();
+        if (!val) return;
+        const icon = document.getElementById('email-check');
+        const err  = document.getElementById('email-inline-error');
+        fetch(`/api/check-email/?email=${encodeURIComponent(val)}`)
+            .then(r => r.json())
+            .then(d => {
+                icon.textContent = d.exists ? '✗' : '✓';
+                icon.className = 'check-icon ' + (d.exists ? 'check-fail' : 'check-ok');
+                err.style.display = d.exists ? 'block' : 'none';
+            });
+    });
+}
+
+// ── Phone digits-only + live check ───────────────────────────────────────────
+const phoneInput = document.getElementById('id_phone_number');
+if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+        phoneInput.value = phoneInput.value.replace(/\D/g, '').substring(0, 10);
+    });
+    phoneInput.addEventListener('blur', () => {
+        const val = phoneInput.value.trim();
+        if (val.length < 10) return;
+        const icon = document.getElementById('phone-check');
+        const err  = document.getElementById('phone-inline-error');
+        fetch(`/api/check-phone/?phone=${encodeURIComponent(val)}`)
+            .then(r => r.json())
+            .then(d => {
+                icon.textContent = d.exists ? '✗' : '✓';
+                icon.className = 'check-icon ' + (d.exists ? 'check-fail' : 'check-ok');
+                err.style.display = d.exists ? 'block' : 'none';
+            });
+    });
+}
+
+// ── Submit validation toast ────────────────────────────────────────────────────
+document.getElementById('signupForm')?.addEventListener('submit', function(e) {
+    let missing = [];
+    this.querySelectorAll('input[required], select[required]').forEach(el => {
+        el.classList.remove('required-missing');
+        if (!el.value.trim()) {
+            el.classList.add('required-missing');
+            const label = el.closest('.form-field-wrap')?.querySelector('label')?.innerText?.trim() || el.name;
+            missing.push(label.replace('*', '').trim());
+        }
+    });
+    if (hiddenAadhar && hiddenAadhar.value.length !== 12) {
+        missing.push('Aadhaar Number');
+    }
+    if (missing.length) {
+        e.preventDefault();
+        document.querySelector('.missing-toast')?.remove();
+        const t = document.createElement('div');
+        t.className = 'missing-toast';
+        t.innerHTML = `⚠ Please fill: <strong>${missing.slice(0,3).join(', ')}${missing.length > 3 ? '…' : ''}</strong>`;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 4500);
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

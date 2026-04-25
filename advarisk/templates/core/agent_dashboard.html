@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block title %}Agent Dashboard | VerDoc{% endblock %}
+
+{% block content %}
+<style>
+    .bhu-plate { display: inline-flex; align-items: center; gap: 4px; background: #F5C518; border: 2px solid #1a1a1a; border-radius: 5px; padding: 4px 8px; font-family: 'Courier New', monospace; font-weight: 900; font-size: 0.78rem; letter-spacing: 1.5px; color: #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+    .bhu-strip { background: #003087; color: white; font-size: 0.35rem; writing-mode: vertical-rl; padding: 1px 2px; border-radius: 2px; font-weight: 700; }
+</style>
+<!-- ── Agent header ─────────────────────────────────────────────────────── -->
+<div
+  style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+  <div>
+    <h1 style="margin:0;font-size:1.8rem;">Task Marketplace</h1>
+    <p style="color:var(--muted);font-size:0.875rem;margin-top:0.3rem;">
+      Welcome, <strong style="color:white;">{{ request.user.get_full_name|default:request.user.username }}</strong>
+      &nbsp;·&nbsp;
+      SRO: <strong style="color:var(--warning);">{{ request.user.sro_no|default:"Not Set" }}</strong>
+      {% if request.user.district %}&nbsp;·&nbsp; {{ request.user.district }}, {{ request.user.state }}{% endif %}
+    </p>
+  </div>
+
+  <!-- Approved transaction counter (read-only) -->
+  <div
+    style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:0.75rem 1.5rem;text-align:center;">
+    <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.2rem;">
+      Completed Tasks (My SRO)</div>
+    <div style="font-size:2.2rem;font-weight:900;color:#10b981;line-height:1;">{{ approved_count }}</div>
+  </div>
+</div>
+
+
+
+<!-- ── Messages ────────────────────────────────────────────────────────── -->
+{% for msg in messages %}
+<div
+  style="background:rgba({% if msg.tags == 'success' %}16,185,129{% elif msg.tags == 'warning' %}245,158,11{% else %}239,68,68{% endif %},0.15);border:1px solid rgba({% if msg.tags == 'success' %}16,185,129{% elif msg.tags == 'warning' %}245,158,11{% else %}239,68,68{% endif %},0.4);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;color:white;font-size:0.875rem;">
+  {{ msg }}
+</div>
+{% endfor %}
+
+<!-- ── Available Tasks ──────────────────────────────────────────────────── -->
+<div class="glass" style="padding:1.5rem;margin-bottom:2rem;">
+  <h2 style="margin-top:0;font-size:1.1rem;color:var(--warning);">⬤ Available Tasks</h2>
+  {% if available_tasks %}
+  {% for task in available_tasks %}
+  <div
+    style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;padding:1.25rem;margin-bottom:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;">
+      <div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">
+          {{ task.get_operation_type_display }}
+          {% if task.amount %}<span style="font-weight:400;color:var(--muted);font-size:0.85rem;">— ₹{{ task.amount|inr }}</span>{% endif %}
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);">
+          SRO: {{ task.sro_no|default:"N/A" }}&nbsp;·&nbsp;{{ task.district|default:"" }}{% if task.district %}, {% endif %}{{ task.state|default:"" }}
+          &nbsp;·&nbsp; {{ task.created_at|date:"M d, Y" }}
+        </div>
+        {% if task.bhu_aadhar %}
+        <div style="margin-top:0.5rem;">
+          <div class="bhu-plate">
+              <span class="bhu-strip">BHU</span>
+              {{ task.bhu_aadhar|slice:":5" }}
+              <span style="opacity:0.4;"> </span>
+              {{ task.bhu_aadhar|slice:"5:10" }}
+              <span style="opacity:0.4;"> </span>
+              {{ task.bhu_aadhar|slice:"10:" }}
+          </div>
+        </div>
+        {% else %}
+        <div style="margin-top:0.5rem;">
+          <div class="bhu-plate" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #94a3b8; box-shadow: none;">
+              <span class="bhu-strip" style="background: #475569;">REF</span>
+              TXN-{{ task.id|stringformat:"06d" }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <form method="post" action="{% url 'accept_task' task.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary" style="font-size:0.85rem;">Accept Task</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="color:var(--muted);padding:2rem 0;text-align:center;font-size:0.9rem;">
+    No pending tasks for your SRO right now.
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── My Active Tasks ──────────────────────────────────────────────────── -->
+<div class="glass" style="padding:1.5rem;">
+  <h2 style="margin-top:0;font-size:1.1rem;color:var(--primary);">⬤ My Active Tasks</h2>
+  {% if my_tasks %}
+  {% for task in my_tasks %}
+  <div
+    style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;padding:1.25rem;margin-bottom:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;">
+      <div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">
+          {{ task.get_operation_type_display }}
+          {% if task.amount %}<span style="font-weight:400;color:var(--muted);font-size:0.85rem;">— ₹{{ task.amount|inr }}</span>{% endif %}
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);">
+          Client: {{ task.client.get_full_name|default:task.client.email }}
+          &nbsp;·&nbsp; SRO: {{ task.sro_no|default:"N/A" }}
+          &nbsp;·&nbsp; {{ task.created_at|date:"M d, Y" }}
+        </div>
+        {% if task.bhu_aadhar %}
+        <div style="margin-top:0.5rem;">
+          <div class="bhu-plate">
+              <span class="bhu-strip">BHU</span>
+              {{ task.bhu_aadhar|slice:":5" }}
+              <span style="opacity:0.4;"> </span>
+              {{ task.bhu_aadhar|slice:"5:10" }}
+              <span style="opacity:0.4;"> </span>
+              {{ task.bhu_aadhar|slice:"10:" }}
+          </div>
+        </div>
+        {% else %}
+        <div style="margin-top:0.5rem;">
+          <div class="bhu-plate" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #94a3b8; box-shadow: none;">
+              <span class="bhu-strip" style="background: #475569;">REF</span>
+              TXN-{{ task.id|stringformat:"06d" }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <a href="{% url 'verify_documents' task.pk %}"
+          style="font-size:0.8rem;background:linear-gradient(135deg,var(--warning),#d97706);color:#1a1a1a;font-weight:700;padding:0.45rem 0.9rem;border-radius:8px;text-decoration:none;">
+          📄 Review Docs
+        </a>
+        <a href="{% url 'complete_task' task.pk %}"
+          style="font-size:0.8rem;background:linear-gradient(135deg,var(--success),#059669);color:white;font-weight:700;padding:0.45rem 0.9rem;border-radius:8px;text-decoration:none;">
+          ✓ Complete
+        </a>
+        <!-- Undo accept -->
+        <form method="post" action="{% url 'undo_accept_task' task.pk %}"
+          onsubmit="return confirm('Return this task to the marketplace?');">
+          {% csrf_token %}
+          <button type="submit"
+            style="font-size:0.8rem;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);font-weight:600;padding:0.45rem 0.9rem;border-radius:8px;cursor:pointer;">
+            ↩ Undo Accept
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="color:var(--muted);padding:2rem 0;text-align:center;font-size:0.9rem;">
+    You have no active tasks right now.
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Transaction History ────────────────────────────────────────────────── -->
+<div class="glass" style="padding:1.5rem;margin-bottom:2rem;">
+  <h2 style="margin-top:0;font-size:1.1rem;color:var(--success);">⬤ Transaction History</h2>
+  {% if completed_tasks %}
+  {% for task in completed_tasks %}
+  <div
+    style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;padding:1.25rem;margin-bottom:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;">
+      <div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">
+          {{ task.get_operation_type_display }}
+          {% if task.amount %}<span style="font-weight:400;color:var(--muted);font-size:0.85rem;">— ₹{{ task.amount|inr }}</span>{% endif %}
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);">
+          Client: {{ task.client.get_full_name|default:task.client.email }}
+          &nbsp;·&nbsp; SRO: {{ task.sro_no|default:"N/A" }}
+          &nbsp;·&nbsp; Completed: {{ task.updated_at|date:"M d, Y" }}
+        </div>
+        {% if task.bhu_aadhar %}
+        <div style="margin-top:0.5rem;">
+          <div class="bhu-plate">
+              <span class="bhu-strip">BHU</span>
+              {{ task.bhu_aadhar|slice:":5" }}
+              <span style="opacity:0.4;"> </span>
+              {{ task.bhu_aadhar|slice:"5:10" }}
+              <span style="opacity:0.4;"> </span>
+              {{ task.bhu_aadhar|slice:"10:" }}
+          </div>
+        </div>
+        {% else %}
+        <div style="margin-top:0.5rem;">
+          <div class="bhu-plate" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #94a3b8; box-shadow: none;">
+              <span class="bhu-strip" style="background: #475569;">REF</span>
+              TXN-{{ task.id|stringformat:"06d" }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <span style="background:rgba(16,185,129,0.2);color:var(--success);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.78rem;margin-right:0.5rem;">Completed</span>
+        <a href="{% url 'operation_history' task.id %}"
+          style="font-size:0.8rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--warning);font-weight:700;padding:0.45rem 0.9rem;border-radius:8px;text-decoration:none;">
+          &#x1F4DC; Ledger
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="color:var(--muted);padding:2rem 0;text-align:center;font-size:0.9rem;">
+    No completed tasks in your history yet.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

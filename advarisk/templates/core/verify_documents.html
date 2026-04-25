@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% block title %}Verify Documents | VerDoc{% endblock %}
+
+{% block content %}
+<style>
+    .doc-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .doc-card-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .doc-info {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .doc-title {
+        font-weight: 600;
+        color: white;
+        margin-bottom: 0.35rem;
+    }
+
+    .doc-no-file {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-style: italic;
+    }
+
+    .doc-no-action {
+        color: #475569;
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+
+    .doc-controls {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .doc-radio-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.9rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        border: 2px solid #475569;
+        background: rgba(71, 85, 105, 0.15);
+        color: var(--muted);
+    }
+
+    .doc-radio-label.approved {
+        border-color: var(--success);
+        background: rgba(16, 185, 129, 0.08);
+        color: var(--success);
+    }
+
+    .doc-radio-label.rejected {
+        border-color: var(--danger);
+        background: rgba(239, 68, 68, 0.08);
+        color: var(--danger);
+    }
+
+    .doc-radio-label input[type="radio"] {
+        accent-color: #94a3b8;
+    }
+
+    .doc-radio-label.approved input[type="radio"] {
+        accent-color: var(--success);
+    }
+
+    .doc-radio-label.rejected input[type="radio"] {
+        accent-color: var(--danger);
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.6rem;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning);
+    }
+
+    .status-badge.approved {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success);
+    }
+
+    .status-badge.rejected {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+    }
+
+    .btn-back {
+        display: block;
+        flex: 1;
+        text-align: center;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--glass-border);
+        color: var(--muted);
+        text-decoration: none;
+    }
+</style>
+
+<div class="glass" style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <div style="margin-bottom: 1.5rem;">
+        <a href="{% url 'agent_dashboard' %}"
+            style="color:var(--warning);text-decoration:none;font-size:0.875rem;font-weight:600;">&larr; Back to
+            Dashboard</a>
+    </div>
+    <h2 style="margin-top: 0; color: white;">&#128196; Document Verification Panel</h2>
+    <p style="color: var(--muted); font-size: 0.875rem; margin-bottom: 0.5rem;">
+        Review each document and mark as <strong style="color: var(--success);">Approved ✓</strong> or <strong
+            style="color: var(--danger);">Rejected ✗</strong>.
+    </p>
+
+    <!-- Task Summary -->
+    <div
+        style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; font-size: 0.875rem; color: #cbd5e1;">
+        <strong>Task:</strong> {{ task.get_operation_type_display }} &nbsp;|&nbsp;
+        <strong>Amount:</strong> ₹{{ task.amount }} &nbsp;|&nbsp;
+        <strong>Client:</strong> {{ task.client.first_name|default:task.client.username }}
+        {% if task.bhu_aadhar %}
+        &nbsp;|&nbsp; <strong>Bhu Aadhar:</strong>
+        <span
+            style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle;background:#F5C518;border:2px solid #1a1a1a;border-radius:5px;padding:3px 8px;font-family:'Courier New',monospace;font-weight:900;font-size:0.85rem;letter-spacing:1.5px;color:#1a1a1a;box-shadow:0 2px 8px rgba(0,0,0,0.5);">
+            <span
+                style="background:#003087;color:white;font-size:0.38rem;writing-mode:vertical-rl;padding:1px 2px;border-radius:2px;font-weight:700;">BHU</span>
+            {{ task.bhu_aadhar|slice:":5" }}&nbsp;{{ task.bhu_aadhar|slice:"5:10" }}&nbsp;{{ task.bhu_aadhar|slice:"10:" }}
+        </span>
+        {% endif %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; color: var(--danger); font-size: 0.875rem;">
+            <strong>Error:</strong> Please correct the issues below.
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        {% for row in doc_rows %}
+        {% if row.file %}
+        <div class="doc-card">
+            <div class="doc-card-inner">
+                <div class="doc-info">
+                    <div class="doc-title">{{ row.label }}</div>
+                    <a href="{{ row.file.url }}" target="_blank"
+                        style="font-size:0.8rem;color:var(--primary);text-decoration:none;">
+                        &#8595; Download Document
+                    </a>
+                    {% if row.form_field.errors %}
+                    <div style="color:var(--danger); font-size: 0.7rem; margin-top: 0.3rem;">{{ row.form_field.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="doc-controls">
+                    {% for radio_val, radio_label in row.form_field.field.choices %}
+                    {% if radio_val == 'APPROVED' %}
+                    <label class="doc-radio-label approved">
+                        {% elif radio_val == 'REJECTED' %}
+                        <label class="doc-radio-label rejected">
+                            {% else %}
+                            <label class="doc-radio-label">
+                                {% endif %}
+                                <input type="radio" name="{{ row.form_field.html_name }}" value="{{ radio_val }}" {% if row.form_field.value|upper == radio_val|upper %}checked{% endif %}>
+                                {{ radio_label }}
+                            </label>
+                            {% endfor %}
+
+                            {% if row.form_field.value|upper == 'APPROVED' %}
+                            <span class="status-badge approved">✓ Approved</span>
+                            {% elif row.form_field.value|upper == 'REJECTED' %}
+                            <span class="status-badge rejected">✗ Rejected</span>
+                            {% else %}
+                            <span class="status-badge">⏳ Pending</span>
+                            {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <a href="{% url 'agent_dashboard' %}" class="btn-back">← Back</a>
+            <button type="submit" class="btn-primary"
+                style="flex: 2; background: linear-gradient(135deg, var(--success), #059669);">
+                &#10003; Save Verification Decisions
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

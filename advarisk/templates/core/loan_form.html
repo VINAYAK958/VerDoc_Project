@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} | VerDoc{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Toast ─────────────────────────────────────────────────────────────── */
+  .missing-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    background: rgba(239, 68, 68, 0.95);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.8rem 1.4rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(20px);
+      opacity: 0
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1
+    }
+  }
+
+  input.required-missing,
+  select.required-missing {
+    border-color: var(--danger) !important;
+  }
+
+  /* ── Amount display ─────────────────────────────────────────────────────── */
+  #amount-display {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+
+  /* ── Bhu Aadhar input ───────────────────────────────────────────────────── */
+  #id_bhu_aadhar {
+    color: #1a1a1a !important;
+    background: #F5C518 !important;
+    border: 3px solid #1a1a1a !important;
+    border-radius: 8px !important;
+    font-family: 'Courier New', monospace !important;
+    font-weight: 900 !important;
+    font-size: 1.05rem !important;
+    letter-spacing: 3px !important;
+    padding: 10px 14px !important;
+    width: 100% !important;
+    text-transform: uppercase !important;
+    caret-color: #003087 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  #id_bhu_aadhar::placeholder {
+    color: rgba(26, 26, 26, 0.45) !important;
+  }
+
+  #id_bhu_aadhar:focus {
+    outline: none !important;
+    border-color: #003087 !important;
+  }
+
+  /* ── File input ─────────────────────────────────────────────────────────── */
+  input[type="file"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed var(--glass-border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  input[type="file"]:hover {
+    border-color: var(--primary);
+  }
+
+  /* ── Select (SRO dropdowns) ─────────────────────────────────────────────── */
+  select {
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+  }
+
+  select:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  select option {
+    background: #1e293b;
+    color: white;
+  }
+</style>
+
+<!-- ── Back button TOP ─────────────────────────────────────────────────── -->
+<div style="margin-bottom:1rem;">
+  <a href="{% url 'client_dashboard' %}"
+    style="color:var(--warning);text-decoration:none;font-size:0.875rem;display:inline-flex;align-items:center;gap:4px;">
+    &larr; Back to Dashboard
+  </a>
+</div>
+
+<div class="glass" style="max-width:640px;margin:0 auto;padding:2rem;">
+  <h2 style="margin-top:0;color:white;">{{ title }}</h2>
+  <p style="color:var(--muted);font-size:0.875rem;margin-bottom:1.75rem;">
+    Complete the form below. Once submitted, an agent matching your SRO will pick it up.
+  </p>
+
+  <form method="post" enctype="multipart/form-data" id="loanForm" novalidate>
+    {% csrf_token %}
+
+    {# ── Amount ──────────────────────────────────────────────────────────── #}
+    <div style="margin-bottom:1.5rem;">
+      <label>Amount <span style="color:var(--danger);">*</span></label>
+      {# Visible formatted display input (not submitted) #}
+      <input type="text" id="amount-display" placeholder="₹ 5,00,000" autocomplete="off" inputmode="numeric">
+      {# Hidden field rendered by form — this is what Django receives #}
+      {{ form.amount }}
+      {% for error in form.amount.errors %}
+      <div style="color:var(--danger);font-size:0.85rem;margin-top:0.3rem;">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    {# ── Bhu Aadhar ──────────────────────────────────────────────────────── #}
+    <div style="margin-bottom:1.5rem;">
+      <label>Bhu Aadhar (ULPIN) <span style="color:var(--muted);font-weight:400;font-size:0.8rem;">—
+          optional</span></label>
+      {{ form.bhu_aadhar }}
+      <div style="color:var(--muted);font-size:0.72rem;margin-top:0.4rem;">
+        14-char alphanumeric ULPIN. Format: [State 2][Dist 2][SubDist 2][Village 4][Plot 4]
+      </div>
+      {% for error in form.bhu_aadhar.errors %}
+      <div style="color:var(--danger);font-size:0.85rem;margin-top:0.3rem;">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    {# ── SRO Target ──────────────────────────────────────────────────────── #}
+    <div
+      style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;">
+      <div
+        style="font-size:0.78rem;color:var(--primary);font-weight:700;margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.5px;">
+        📍 Target SRO</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
+        <div>
+          <label style="font-size:0.82rem;">State <span style="color:var(--danger);">*</span></label>
+          {{ form.state }}
+          {% for err in form.state.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{ err
+            }}</div>{% endfor %}
+        </div>
+        <div>
+          <label style="font-size:0.82rem;">District <span style="color:var(--danger);">*</span></label>
+          {{ form.district }}
+          {% for err in form.district.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{
+            err }}</div>{% endfor %}
+        </div>
+        <div>
+          <label style="font-size:0.82rem;">Sub-District <span style="color:var(--danger);">*</span></label>
+          {{ form.sub_district }}
+        </div>
+        <div>
+          <label style="font-size:0.82rem;">SRO Number <span style="color:var(--danger);">*</span></label>
+          {{ form.sro_no }}
+          {% for err in form.sro_no.errors %}<div style="color:var(--danger);font-size:0.78rem;margin-top:0.2rem;">{{
+            err }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Document Uploads ─────────────────────────────────────────────────── #}
+    <div
+      style="font-size:0.78rem;color:var(--primary);font-weight:700;margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.5px;">
+      📎 Property Documents <span
+        style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;font-size:0.75rem;">(all optional
+        – upload what you have)</span></div>
+
+
+    {# ── Each doc field rendered explicitly (Django doesn't support multi-var for) #}
+    {% for field in form %}
+    {% if field.html_name == 'doc_lease_deed' or field.html_name == 'doc_title_deed' or field.html_name ==
+    'doc_encumbrance' or field.html_name == 'doc_attornment' or field.html_name == 'doc_mother_deed' or field.html_name
+    == 'doc_building_plan' or field.html_name == 'doc_occupancy' or field.html_name == 'doc_tax_receipts' %}
+    <div
+      style="margin-bottom:1rem;padding:0.75rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;">
+      <label for="{{ field.id_for_label }}" style="font-size:0.85rem;margin-bottom:0.35rem;display:block;">{{
+        field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}
+      <div style="color:var(--muted);font-size:0.72rem;margin-top:0.3rem;">{{ field.help_text }}</div>
+      {% endif %}
+      {% for error in field.errors %}
+      <div style="color:var(--danger);font-size:0.8rem;margin-top:0.2rem;">{{ error }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+
+
+    {# Non-field errors #}
+    {% if form.non_field_errors %}
+    <div
+      style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
+      {% for error in form.non_field_errors %}
+      <div style="color:#ef4444;font-size:0.875rem;">{{ error }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn-primary" style="width:100%;padding:0.85rem;font-size:1rem;margin-top:0.5rem;">
+      Submit Request
+    </button>
+  </form>
+
+  <!-- Back button BOTTOM -->
+  <div style="margin-top:1.5rem;text-align:center;">
+    <a href="{% url 'client_dashboard' %}" style="color:var(--warning);text-decoration:none;font-size:0.875rem;">&larr;
+      Back to Dashboard</a>
+  </div>
+</div>
+
+<span id="sro-data" data-map='{{ sro_map_json|safe }}' style="display:none;"></span>
+
+<script>
+  // ── SRO cascade dropdowns ────────────────────────────────────────────────────
+  const SRO_MAP = JSON.parse(document.getElementById('sro-data').dataset.map);
+
+  function populateSelect(el, options, placeholder, selectedValue = '') {
+    if (!el) return;
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    options.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o; opt.textContent = o;
+      if (o === selectedValue) opt.selected = true;
+      el.appendChild(opt);
+    });
+  }
+
+  const stateEl = document.getElementById('sro-state');
+  const distEl = document.getElementById('sro-district');
+  const subEl = document.getElementById('sro-sub-district');
+  const sroEl = document.getElementById('sro-node');
+
+  function initSRO() {
+    if (!stateEl) return;
+
+    const savedState = "{{ form.state.value|default:'' }}";
+    const savedDist = "{{ form.district.value|default:'' }}";
+    const savedSub = "{{ form.sub_district.value|default:'' }}";
+    const savedSRO = "{{ form.sro_no.value|default:'' }}";
+
+    // 1. Populate States
+    populateSelect(stateEl, Object.keys(SRO_MAP), '— Select State —', savedState);
+
+    // 2. Populate Districts if State exists
+    if (savedState) {
+      populateSelect(distEl, Object.keys(SRO_MAP[savedState] || {}), '— Select District —', savedDist);
+    }
+
+    // 3. Populate Sub-Districts if District exists
+    if (savedState && savedDist) {
+      const subs = Object.keys((SRO_MAP[savedState] || {})[savedDist] || {});
+      populateSelect(subEl, subs, '— Select Sub-District —', savedSub);
+    }
+
+    // 4. Populate SROs if Sub-District exists
+    if (savedState && savedDist && savedSub) {
+      const sros = ((SRO_MAP[savedState] || {})[savedDist] || {})[savedSub] || [];
+      populateSelect(sroEl, sros, '— Select SRO No —', savedSRO);
+    }
+
+    // Listeners
+    stateEl.addEventListener('change', () => {
+      populateSelect(distEl, Object.keys(SRO_MAP[stateEl.value] || {}), '— Select District —');
+      populateSelect(subEl, [], '— Select Sub-District —');
+      populateSelect(sroEl, [], '— Select SRO —');
+    });
+    distEl.addEventListener('change', () => {
+      const subs = Object.keys((SRO_MAP[stateEl.value] || {})[distEl.value] || {});
+      populateSelect(subEl, subs, '— Select Sub-District —');
+      populateSelect(sroEl, [], '— Select SRO —');
+    });
+    subEl.addEventListener('change', () => {
+      const sros = ((SRO_MAP[stateEl.value] || {})[distEl.value] || {})[subEl.value] || [];
+      populateSelect(sroEl, sros, '— Select SRO No —');
+    });
+  }
+
+  // ── Amount formatting ─────────────────────────────────────────────────────────
+  function syncAmount(el, amtHidden) {
+    if (!el || !amtHidden) return;
+    // Strip all non-numeric except dot
+    let raw = el.value.replace(/[^0-9.]/g, '');
+    const dotIdx = raw.indexOf('.');
+    let intPart = dotIdx >= 0 ? raw.substring(0, dotIdx) : raw;
+    let decPart = dotIdx >= 0 ? '.' + raw.substring(dotIdx + 1).replace(/\./g, '').substring(0, 2) : '';
+    intPart = intPart.replace(/,/g, '');
+    amtHidden.value = intPart ? (intPart + decPart) : '';
+    if (intPart && parseInt(intPart, 10) > 0) {
+      const num = parseInt(intPart, 10);
+      el.value = '₹ ' + num.toLocaleString('en-IN') + decPart;
+    } else if (!raw) {
+      el.value = '';
+    }
+  }
+
+  function restoreAmount(amtDisplay, amtHidden) {
+    if (!amtDisplay || !amtHidden || !amtHidden.value) return;
+    const val = amtHidden.value;
+    const dotIdx = val.indexOf('.');
+    let intPart = dotIdx >= 0 ? val.substring(0, dotIdx) : val;
+    let decPart = dotIdx >= 0 ? '.' + val.substring(dotIdx + 1) : '';
+    const num = parseInt(intPart, 10);
+    if (!isNaN(num)) {
+      amtDisplay.value = '₹ ' + num.toLocaleString('en-IN') + decPart;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initSRO();
+
+    const amtHidden = document.getElementById('id_amount');
+    const amtDisplay = document.getElementById('amount-display');
+
+    if (amtDisplay && amtHidden) {
+      // Restore if value exists (from Django re-render)
+      restoreAmount(amtDisplay, amtHidden);
+
+      amtDisplay.addEventListener('input', function () { syncAmount(this, amtHidden); });
+      amtDisplay.addEventListener('change', function () { syncAmount(this, amtHidden); });
+      amtDisplay.addEventListener('blur', function () { syncAmount(this, amtHidden); });
+    }
+
+    // ── Bhu Aadhar: uppercase, alphanumeric, max 14 ─────────────────────────
+    const bhuInput = document.getElementById('id_bhu_aadhar');
+    if (bhuInput) {
+      bhuInput.addEventListener('input', function () {
+        let v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (v.length > 14) v = v.substring(0, 14);
+        this.value = v;
+      });
+    }
+  });
+
+  // ── Submit validation ─────────────────────────────────────────────────────────
+  document.getElementById('loanForm').addEventListener('submit', function (e) {
+    const amtHidden = document.getElementById('id_amount');
+    const missing = [];
+
+    if (!amtHidden || !amtHidden.value || parseFloat(amtHidden.value) <= 0) {
+      missing.push('Amount');
+      document.getElementById('amount-display')?.classList.add('required-missing');
+    }
+    if (stateEl && !stateEl.value) missing.push('State');
+    if (sroEl && !sroEl.value) missing.push('SRO Number');
+
+    if (missing.length) {
+      e.preventDefault();
+      document.querySelector('.missing-toast')?.remove();
+      const toast = document.createElement('div');
+      toast.className = 'missing-toast';
+      toast.innerHTML = `⚠ Missing: <strong>${missing.join(', ')}</strong>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4500);
+    }
+  });
+</script>
+{% endblock %}

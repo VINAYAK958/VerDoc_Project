@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Audit Ledger | VerDoc{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="margin: 0; font-size: 1.6rem;">&#x1F4DC; Audit Ledger</h1>
+        <p style="color: var(--muted); font-size: 0.875rem; margin-top: 0.25rem;">
+            {{ task.get_operation_type_display }} &nbsp;·&nbsp; ₹{{ task.amount }}
+            &nbsp;·&nbsp; {{ task.sro_no|default:"N/A" }}
+        </p>
+    </div>
+    <a href="javascript:history.back()" style="color: var(--muted); text-decoration: none; font-size: 0.875rem;">&larr; Back</a>
+</div>
+
+<div class="glass" style="padding: 1.5rem;">
+    {% if history %}
+        {% for entry in history %}
+        <div style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--glass-border);">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem;">
+                &#x1F4CB;
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 0.9rem; color: white; margin-bottom: 0.2rem;">{{ entry.action }}</div>
+                <div style="font-size: 0.75rem; color: var(--muted);">
+                    {% if not user.is_client or not entry.actor.is_agent %}
+                        by <strong style="color: #cbd5e1;">{{ entry.actor.username|default:"System" }}</strong> &nbsp;·&nbsp;
+                    {% endif %}
+                    {{ entry.timestamp|date:"M d, Y H:i" }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; padding: 3rem; color: var(--muted);">No history entries yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

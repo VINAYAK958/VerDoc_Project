@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block title %}Client Dashboard | VerDoc{% endblock %}
+
+{% block content %}
+<style>
+    .doc-icon {
+        font-size: 0.9rem;
+    }
+
+    .doc-icon.approved {
+        color: var(--success);
+    }
+
+    .doc-icon.rejected {
+        color: var(--danger);
+    }
+
+    .doc-icon.pending {
+        color: var(--muted);
+    }
+
+    .bhu-plate {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #F5C518;
+        border: 2px solid #1a1a1a;
+        border-radius: 5px;
+        padding: 4px 8px;
+        font-family: 'Courier New', monospace;
+        font-weight: 900;
+        font-size: 0.78rem;
+        letter-spacing: 1.5px;
+        color: #1a1a1a;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .bhu-strip {
+        background: #003087;
+        color: white;
+        font-size: 0.35rem;
+        writing-mode: vertical-rl;
+        padding: 1px 2px;
+        border-radius: 2px;
+        font-weight: 700;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.3;
+        }
+    }
+</style>
+
+<div
+    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="margin: 0; font-size: 1.8rem;">Welcome, {{ user.first_name|default:user.username }}!</h1>
+    <div>
+        <a href="{% url 'raise_loan' %}" class="btn-primary" style="margin-right: 0.5rem;">+ Raise Loan</a>
+        <a href="{% url 'payoff_loan' %}" class="btn-primary"
+            style="background: linear-gradient(135deg, var(--success), #059669);">&darr; Pay Off Loan</a>
+    </div>
+</div>
+
+<!-- ── Active Operations ──────────────────────────────────────────────────── -->
+<div class="glass" style="padding: 1.5rem; margin-bottom: 2rem;">
+    <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--primary);">⬤ Active Operations</h2>
+
+    {% if active_operations %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--glass-border); color: var(--muted);">
+                    <th style="padding: 1rem 0.5rem;">Type</th>
+                    <th style="padding: 1rem 0.5rem;">Target SRO</th>
+                    <th style="padding: 1rem 0.5rem;">Bhu Aadhar</th>
+                    <th style="padding: 1rem 0.5rem;">Amount</th>
+                    <th style="padding: 1rem 0.5rem;">Documents</th>
+                    <th style="padding: 1rem 0.5rem;">Status</th>
+
+                    <th style="padding: 1rem 0.5rem;">Date</th>
+                    <th style="padding: 1rem 0.5rem;">Files</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for op in active_operations %}
+                <tr style="border-bottom: 1px solid var(--glass-border);">
+                    <td style="padding: 0.9rem 0.5rem; font-weight: 600;">{{ op.get_operation_type_display }}</td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #cbd5e1;">{{ op.sro_no|default:"N/A" }}</span><br>
+                        <span style="font-size: 0.75rem; color: var(--muted);">
+                            {{ op.district|default:"" }}{% if op.district %}, {% endif %}{{ op.state|default:"" }}
+                        </span>
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        {% if op.bhu_aadhar %}
+                        <div class="bhu-plate">
+                            <span class="bhu-strip">BHU</span>
+                            {{ op.bhu_aadhar|slice:":5" }}
+                            <span style="opacity:0.4;"> </span>
+                            {{ op.bhu_aadhar|slice:"5:10" }}
+                            <span style="opacity:0.4;"> </span>
+                            {{ op.bhu_aadhar|slice:"10:" }}
+                        </div>
+                        {% else %}
+                        <div class="bhu-plate"
+                            style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #94a3b8; box-shadow: none;">
+                            <span class="bhu-strip" style="background: #475569;">REF</span>
+                            TXN-{{ op.id|stringformat:"06d" }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem; font-family: monospace; font-weight: 600;">
+                        {% if op.amount %}
+                        ₹{{ op.amount|inr }}
+                        {% else %}
+                        <span style="color:#475569;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem; font-size: 0.78rem;">
+                        {% for label, status, file in op.uploaded_doc_details %}
+                        <div
+                            style="display:flex; gap:0.4rem; align-items:center; margin-bottom:0.35rem; padding: 0.3rem 0.4rem; border-radius: 5px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+
+                            {% if status|upper == 'APPROVED' %}
+                            <span
+                                style="flex-shrink:0; width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 5px var(--success);"></span>
+                            {% elif status|upper == 'REJECTED' %}
+                            <span
+                                style="flex-shrink:0; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 5px var(--danger);"></span>
+                            {% else %}
+                            <span
+                                style="flex-shrink:0; width: 7px; height: 7px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 5px var(--warning); animation: pulse 1.5s infinite;"></span>
+                            {% endif %}
+
+                            {% if file %}
+                            <a href="{{ file.url }}" target="_blank"
+                                style="color: #cbd5e1; text-decoration: none; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;"
+                                title="{{ label }}" onmouseover="this.style.color='var(--primary)';"
+                                onmouseout="this.style.color='#cbd5e1';">
+                                {{ label }}
+                            </a>
+                            {% else %}
+                            <span style="color: #475569; flex: 1;">{{ label }}</span>
+                            {% endif %}
+
+                            {% if status|upper == 'APPROVED' %}
+                            <span
+                                style="flex-shrink:0; font-size: 0.6rem; color: var(--success); background: rgba(16,185,129,0.12); padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; border: 1px solid rgba(16,185,129,0.25);">✓
+                                OK</span>
+                            {% elif status|upper == 'REJECTED' %}
+                            <span
+                                style="flex-shrink:0; font-size: 0.6rem; color: var(--danger); background: rgba(239,68,68,0.12); padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; border: 1px solid rgba(239,68,68,0.25);">✗
+                                REJ{% if file %} ↑{% endif %}</span>
+                            {% else %}
+                            <span
+                                style="flex-shrink:0; font-size: 0.6rem; color: var(--warning); background: rgba(245,158,11,0.12); padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; border: 1px solid rgba(245,158,11,0.25);">…
+                                PEND</span>
+                            {% endif %}
+
+                        </div>
+                        {% endfor %}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        {% if op.status == 'PENDING' %}
+                        <div style="margin-bottom: 0.3rem;">
+                            <span
+                                style="background:rgba(245,158,11,0.2);color:var(--warning);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.78rem;">
+                                {{ op.get_status_display }}
+                            </span>
+                        </div>
+                        {% elif op.status == 'IN_PROGRESS' %}
+                        <div style="margin-bottom: 0.3rem;">
+                            <span
+                                style="background:rgba(59,130,246,0.2);color:var(--primary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.78rem;">
+                                {{ op.get_status_display }}
+                            </span>
+                        </div>
+                        {% else %}
+                        <span style="font-size:0.78rem;">{{ op.get_status_display }}</span>
+                        {% endif %}
+
+                        {% if op.status != 'COMPLETED' %}
+                        <div style="font-size: 0.7rem; color: var(--muted); line-height: 1.4;">
+                            <span style="color: var(--success);">{{ op.approved_docs_count }} Approved</span><br>
+                            <span style="color: var(--danger);">{{ op.rejected_docs_count }} Rejected</span>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding: 0.9rem 0.5rem; color: var(--muted); font-size: 0.85rem;">
+                        {{ op.created_at|date:"M d, Y" }}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        {% if op.verification_proof %}
+                        <a href="{{ op.verification_proof.url }}" target="_blank"
+                            style="color:var(--success);text-decoration:none;font-size:0.8rem;display:block;">&darr; SRO
+                            Proof</a>
+                        {% endif %}
+                        <a href="{% url 'operation_history' op.id %}"
+                            style="color:var(--warning);text-decoration:none;font-size:0.8rem;display:block;margin-top:0.25rem;">&#x1F4DC;
+                            Ledger</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem 0; color: var(--muted);">
+        You have no active loan operations right now.
+        <br><br>
+        <a href="{% url 'raise_loan' %}" class="btn-primary" style="margin-top: 1rem; display: inline-block;">Raise a
+            Loan</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Transaction History ────────────────────────────────────────────────── -->
+<div class="glass" style="padding: 1.5rem;">
+    <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--success);">⬤ Transaction History</h2>
+
+    {% if completed_operations %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--glass-border); color: var(--muted);">
+                    <th style="padding: 1rem 0.5rem;">Type</th>
+                    <th style="padding: 1rem 0.5rem;">Target SRO</th>
+                    <th style="padding: 1rem 0.5rem;">Bhu Aadhar</th>
+                    <th style="padding: 1rem 0.5rem;">Amount</th>
+                    <th style="padding: 1rem 0.5rem;">Documents</th>
+                    <th style="padding: 1rem 0.5rem;">Status</th>
+
+                    <th style="padding: 1rem 0.5rem;">Completed On</th>
+                    <th style="padding: 1rem 0.5rem;">Files</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for op in completed_operations %}
+                <tr style="border-bottom: 1px solid var(--glass-border);">
+                    <td style="padding: 0.9rem 0.5rem; font-weight: 600;">{{ op.get_operation_type_display }}</td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #cbd5e1;">{{ op.sro_no|default:"N/A" }}</span><br>
+                        <span style="font-size: 0.75rem; color: var(--muted);">
+                            {{ op.district|default:"" }}{% if op.district %}, {% endif %}{{ op.state|default:"" }}
+                        </span>
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        {% if op.bhu_aadhar %}
+                        <div class="bhu-plate">
+                            <span class="bhu-strip">BHU</span>
+                            {{ op.bhu_aadhar|slice:":5" }}
+                            <span style="opacity:0.4;"> </span>
+                            {{ op.bhu_aadhar|slice:"5:10" }}
+                            <span style="opacity:0.4;"> </span>
+                            {{ op.bhu_aadhar|slice:"10:" }}
+                        </div>
+                        {% else %}
+                        <div class="bhu-plate"
+                            style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #94a3b8; box-shadow: none;">
+                            <span class="bhu-strip" style="background: #475569;">REF</span>
+                            TXN-{{ op.id|stringformat:"06d" }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem; font-family: monospace; font-weight: 600;">
+                        {% if op.amount %}
+                        ₹{{ op.amount|inr }}
+                        {% else %}
+                        <span style="color:#475569;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem; font-size: 0.78rem;">
+                        {% for label, status, file in op.uploaded_doc_details %}
+                        <div
+                            style="display:flex; gap:0.4rem; align-items:center; margin-bottom:0.35rem; padding: 0.3rem 0.4rem; border-radius: 5px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+
+                            {% if status|upper == 'APPROVED' %}
+                            <span
+                                style="flex-shrink:0; width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 5px var(--success);"></span>
+                            {% elif status|upper == 'REJECTED' %}
+                            <span
+                                style="flex-shrink:0; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 5px var(--danger);"></span>
+                            {% else %}
+                            <span
+                                style="flex-shrink:0; width: 7px; height: 7px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 5px var(--warning); animation: pulse 1.5s infinite;"></span>
+                            {% endif %}
+
+                            {% if file %}
+                            <a href="{{ file.url }}" target="_blank"
+                                style="color: #cbd5e1; text-decoration: none; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;"
+                                title="{{ label }}" onmouseover="this.style.color='var(--primary)';"
+                                onmouseout="this.style.color='#cbd5e1';">
+                                {{ label }}
+                            </a>
+                            {% else %}
+                            <span style="color: #475569; flex: 1;">{{ label }}</span>
+                            {% endif %}
+
+                            {% if status|upper == 'APPROVED' %}
+                            <span
+                                style="flex-shrink:0; font-size: 0.6rem; color: var(--success); background: rgba(16,185,129,0.12); padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; border: 1px solid rgba(16,185,129,0.25);">✓
+                                OK</span>
+                            {% elif status|upper == 'REJECTED' %}
+                            <span
+                                style="flex-shrink:0; font-size: 0.6rem; color: var(--danger); background: rgba(239,68,68,0.12); padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; border: 1px solid rgba(239,68,68,0.25);">✗
+                                REJ{% if file %} ↑{% endif %}</span>
+                            {% else %}
+                            <span
+                                style="flex-shrink:0; font-size: 0.6rem; color: var(--warning); background: rgba(245,158,11,0.12); padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; border: 1px solid rgba(245,158,11,0.25);">…
+                                PEND</span>
+                            {% endif %}
+
+                        </div>
+                        {% endfor %}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        <span
+                            style="background:rgba(16,185,129,0.2);color:var(--success);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.78rem;">
+                            {{ op.get_status_display }}
+                        </span>
+                    </td>
+
+                    <td style="padding: 0.9rem 0.5rem; color: var(--muted); font-size: 0.85rem;">
+                        {{ op.updated_at|date:"M d, Y" }}
+                    </td>
+                    <td style="padding: 0.9rem 0.5rem;">
+                        {% if op.verification_proof %}
+                        <a href="{{ op.verification_proof.url }}" target="_blank"
+                            style="color:var(--success);text-decoration:none;font-size:0.8rem;display:block;">&darr; SRO
+                            Proof</a>
+                        {% endif %}
+                        <a href="{% url 'operation_history' op.id %}"
+                            style="color:var(--warning);text-decoration:none;font-size:0.8rem;display:block;margin-top:0.25rem;">&#x1F4DC;
+                            Ledger</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem 0; color: var(--muted);">
+        No completed operations in your history yet.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

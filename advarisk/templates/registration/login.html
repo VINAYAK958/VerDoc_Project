@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Log In | VerDoc{% endblock %}
+
+{% block content %}
+<style>
+  .login-hint {
+    display: flex; gap: 0.75rem; margin-bottom: 1.75rem;
+    border-radius: 10px; padding: 1rem;
+    background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.2);
+  }
+  .login-hint dt { font-size: 0.8rem; font-weight: 700; color: var(--primary); margin-bottom: 0.2rem; }
+  .login-hint dd { font-size: 0.78rem; color: var(--muted); margin-left: 0; }
+</style>
+
+<div class="glass" style="max-width:420px;margin:4rem auto;padding:2.5rem;">
+  <h1 style="font-size:1.6rem;margin-bottom:0.25rem;">Welcome back</h1>
+  <p style="color:var(--muted);font-size:0.875rem;margin-bottom:1.5rem;">Sign in to your VerDoc account</p>
+
+  <div class="login-hint">
+    <div style="font-size:1.4rem;flex-shrink:0;">ℹ️</div>
+    <dl>
+      <dt>🏦 Clients</dt>
+      <dd>Use your <strong>bank email address</strong></dd>
+      <dt style="margin-top:0.5rem;">🪪 Agents</dt>
+      <dd>Use your <strong>mobile number</strong> or email</dd>
+    </dl>
+  </div>
+
+  <form method="post" id="loginForm">
+    {% csrf_token %}
+    <!-- Override label so "Username" → "Email or Mobile No." -->
+    <div style="margin-bottom:1.25rem;">
+      <label for="id_username">Email or Mobile No.</label>
+      <input type="text" name="username" id="id_username"
+             placeholder="email@bank.com or 9876543210"
+             autocomplete="username" required
+             style="width:100%;padding:0.65rem 0.9rem;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.9rem;">
+    </div>
+    <div style="margin-bottom:1.25rem;">
+      <label for="id_password">Password</label>
+      <input type="password" name="password" id="id_password"
+             placeholder="••••••••" autocomplete="current-password" required
+             style="width:100%;padding:0.65rem 0.9rem;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.9rem;">
+    </div>
+    {% if form.non_field_errors %}
+      {% for error in form.non_field_errors %}
+      <div style="color:var(--danger);font-size:0.85rem;margin-bottom:0.75rem;">{{ error }}</div>
+      {% endfor %}
+    {% endif %}
+    <button type="submit" class="btn-primary"
+            style="width:100%;margin-top:0.5rem;padding:0.8rem;">Sign In</button>
+  </form>
+
+  <div style="margin-top:1.5rem;text-align:center;font-size:0.85rem;color:var(--muted);">
+    Don't have an account? <a href="{% url 'signup' %}" style="color:var(--primary);">Sign up</a>
+    <br><br>
+    <a href="{% url 'smart_password_reset' %}" style="color:var(--muted);">Forgot password?</a>
+  </div>
+</div>
+{% endblock %}

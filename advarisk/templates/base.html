@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VerDoc{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary:     #3b82f6;
+            --success:     #10b981;
+            --warning:     #f59e0b;
+            --danger:      #ef4444;
+            --bg:          #0a0f1e;
+            --surface:     #111827;
+            --glass-bg:    rgba(255,255,255,0.05);
+            --glass-border:rgba(255,255,255,0.10);
+            --text:        #f1f5f9;
+            --muted:       #94a3b8;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(59,130,246,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 80%, rgba(16,185,129,0.10) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navbar */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(10,15,30,0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 60px;
+        }
+        .nav-brand {
+            font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--primary), var(--success));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+        .nav-links { display: flex; gap: 0.5rem; align-items: center; }
+        .nav-links a {
+            color: var(--muted); text-decoration: none; font-size: 0.875rem;
+            padding: 0.4rem 0.9rem; border-radius: 6px; transition: all 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); background: var(--glass-bg); }
+        .nav-badge {
+            font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem;
+            border-radius: 99px; background: rgba(59,130,246,0.2); color: var(--primary);
+            border: 1px solid rgba(59,130,246,0.3);
+        }
+
+        /* Main content */
+        main {
+            position: relative; z-index: 1;
+            max-width: 1200px; margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Glass card */
+        .glass {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), #6366f1);
+            color: white; text-decoration: none; border: none;
+            padding: 0.6rem 1.4rem; border-radius: 8px;
+            font-size: 0.875rem; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Form inputs */
+        input[type="text"], input[type="email"], input[type="password"],
+        input[type="number"], input[type="tel"], select, textarea {
+            width: 100%; padding: 0.65rem 0.9rem;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px; color: var(--text);
+            font-family: inherit; font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: var(--primary);
+        }
+        select option { background: var(--surface); }
+        label { font-size: 0.875rem; color: var(--muted); display: block; margin-bottom: 0.25rem; }
+
+        /* Messages */
+        .messages { margin-bottom: 1.5rem; }
+        .message {
+            padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .message.success { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+        .message.error   { background: rgba(239,68,68,0.15);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+        .message.warning { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+        .message.info    { background: rgba(59,130,246,0.15);  color: var(--primary); border: 1px solid rgba(59,130,246,0.3); }
+
+        /* Footer */
+        footer {
+            text-align: center; font-size: 0.75rem; color: #374151;
+            padding: 2rem; border-top: 1px solid var(--glass-border);
+            margin-top: 4rem; position: relative; z-index: 1;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav>
+    <a href="{% url 'dashboard' %}" class="nav-brand">VerDoc</a>
+    <div class="nav-links">
+        {% if user.is_authenticated %}
+            <span class="nav-badge">{{ user.get_role_display|default:user.role }}</span>
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+            <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" style="background:none;border:none;color:var(--muted);font-size:0.875rem;padding:0.4rem 0.9rem;border-radius:6px;cursor:pointer;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.color='var(--text)';this.style.background='var(--glass-bg)'" onmouseout="this.style.color='var(--muted)';this.style.background='none'">Log Out</button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}">Log In</a>
+            <a href="{% url 'signup' %}">Sign Up</a>
+        {% endif %}
+    </div>
+</nav>
+
+<main>
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    &copy; 2026 VerDoc Operations Platform. All rights reserved.
+</footer>
+
+</body>
+</html>
